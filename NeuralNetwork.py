@@ -68,11 +68,13 @@ def perceptron(T, w_values, eta):
             #matrice de poids 
             W = numpy.full((label.size,image.size+1),w_values)
             dW = numpy.full(W.shape, 0.0) 
+            ys = numpy.full((label.size, T+1), 0.0)
         
         y = numpy.full((10,),0.0)
         for i in range(label.size):
             y[i] =  sum(numpy.multiply(W[i], numpy.insert(image,0,1)))
-        print(y)
+            ys[i, cpt] = y[i]
+        #print(y)
             for j in range(image.size+1):
                 dW[i,j] = eta*numpy.insert(image,0,1)[j]*(label[i]-y[i])
         
@@ -105,6 +107,6 @@ def test_perceptron(T, W):
     print("OK ratio : "+str(1.0*nbOK/cpt))
     
 
-W = perceptron(T=100, w_values=0.001, eta=0.01)
+W = perceptron(T=100, w_values=0.001, eta=0.001)
 test_perceptron(100, W)
 numpy.max(W)
