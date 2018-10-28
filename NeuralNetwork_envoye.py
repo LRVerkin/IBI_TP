@@ -105,6 +105,6 @@ def test_perceptron(T, W):
     print("OK ratio : "+str(1.0*nbOK/cpt))
     
 
-W = perceptron(T=1000, w_values=0.001, eta=0.0001)
+W = perceptron(T=1000, w_values=0.001, eta=0.000000001)
 test_perceptron(100, W)
 numpy.max(W)
