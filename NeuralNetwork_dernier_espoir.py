@@ -66,7 +66,7 @@ def perceptron(Time, w_values, eta):
         image = image.reshape((785,1))
         label = numpy.transpose(label[0,:].numpy())
         label = label.reshape((10,1))
-        print(cpt_blobal, numpy.argmax(label))
+        #print(cpt_blobal, numpy.argmax(label))
         
         T = Variable(torch.as_tensor(label), requires_grad = False)
         X = Variable(torch.as_tensor(image), requires_grad = True)
@@ -137,8 +137,8 @@ ratios = []
         ratio = test_perceptron(1000, W)
         ratios.append(ratio)'''
 #plot pour le temps
-for j in range(0, 40):
-    eta = j*100
+for j in range(0, 30):
+    eta = j*50
     print(eta)
     etas.append(eta)
     W = perceptron(Time=eta, w_values=0.01, eta=0.0005)
@@ -146,6 +146,6 @@ for j in range(0, 40):
     ratios.append(ratio)
 
 plt.plot(etas, ratios)
-plt.title("Evolution du ratio de bonnes réponses\n en fonction d'omega")
+plt.title("Evolution du ratio de bonnes réponses\n en fonction du temps d'apprentissage")
 plt.ylabel("Taux de réussite")
-plt.xlabel("Valeurs initiales des poids")
+plt.xlabel("Nombre d'itérations pour l'apprentissage")

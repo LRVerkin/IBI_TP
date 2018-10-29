@@ -66,7 +66,7 @@ def shallow(Time, w_values, eta, N_neurons):
         image = image.reshape((785,1))
         label = numpy.transpose(label[0,:].numpy())
         label = label.reshape((10,1))
-        #print(cpt_blobal, numpy.argmax(label))
+        print(cpt_blobal, numpy.argmax(label))
         
         T = Variable(torch.as_tensor(label), requires_grad = False)
         X = Variable(torch.as_tensor(image), requires_grad = True)
@@ -74,22 +74,26 @@ def shallow(Time, w_values, eta, N_neurons):
         if cpt == 0:
             #initialisation
             #matrice de poids 
-            W1 =  Variable(w_values*torch.ones(N_neurons, image.size), requires_grad=True) 
-            W2 =  Variable(w_values*torch.ones(label.size, N_neurons), requires_grad=True) 
+            losses = []
+            W1 =  Variable(w_values*torch.randn(N_neurons, image.size), requires_grad=True) 
+            W2 =  Variable(w_values*torch.randn(label.size, N_neurons), requires_grad=True) 
         #Y = Variable(poids.data.mm(X.data), requires_grad = True)
-        #sig = Sigmoid()
-        #if cpt == 0:
-        #Y1 = sig(W1.mm(X))
-        Y1 = 1/(1+torch.exp(-W1.mm(X)))
+        sig = Sigmoid()
+        Y1 = sig(W1.mm(X))
+        #Y1 = 1/(1+torch.exp(-W1.mm(X)))
         
         Y2 = W2.mm(Y1)
+        print("prediction: ", int(Y2.max(0)[1][0]))
+        #Y2 = W2.mm(W1.mm(X))
         loss = MSELoss()
         output = loss(Y2, T)
+        losses.append(output)
         output.backward()
         W1.data -= eta* W1.grad.data
         W2.data -= eta* W2.grad.data
-        print(W1.grad.data)
-        print(W2.grad.data)
+        
+        #print(W1.grad.data)
+        #print(W2.grad.data)
         cpt_blobal +=1
         cpt += 1
         
@@ -97,6 +101,7 @@ def shallow(Time, w_values, eta, N_neurons):
         W2.grad.data.zero_()
         if cpt > Time:
             break
+        plt.plot(losses)
     return W1.data, W2.data
 
 def prediction(W1, W2, image):
@@ -125,8 +130,8 @@ def test_shallow(T, W1, W2):
     print("OK ratio : "+str(1.0*nbOK/cpt))
     return 1.0*nbOK/cpt
 
-W1, W2 = shallow(Time=2000, w_values=0.1, eta=0.005, N_neurons = 100)
-ratio = test_shallow(1000, W1, W2)
+W1, W2 = shallow(Time=2000, w_values=0.03, eta=0.06, N_neurons = 32)
+ratio = test_shallow(100, W1, W2)
         
 '''etas = []
 ratios = []
