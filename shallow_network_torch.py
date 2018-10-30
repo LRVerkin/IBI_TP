@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt # pour l'affichage
 import torch,torch.utils.data
 from torch.autograd import *
 from torch.nn import *
+import math
 
 ## implementation d'un perceptron simple
 
@@ -49,18 +50,10 @@ test_dataset = torch.utils.data.TensorDataset(test_data,test_data_label)
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=TRAIN_BATCH_SIZE, shuffle=True)
 # on crée le lecteur de la base de données de test (pour torch)
 test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=True)
-# 10 fois
-#for i in range(0,10):
-    # on demande les prochaines données de la base
-#    (_,(image,label)) = enumerate(train_loader).next()
-    # on les affiche
-#    affichage(image[0,:].numpy(),label[0,:].numpy())
-# NB pour lire (plus proprement) toute la base (ce que vous devrez faire dans le TP) plutôt utiliser la formulation suivante
 
-def perceptron(Time, w_values, eta):
+def shallow(Time, w_values, eta, N_neurons):
     cpt = 0
     cpt_blobal = 0
-    losses = []
     for image,label in train_loader:
         image = numpy.transpose(numpy.insert(image[0,:].numpy().flatten(), 0, 1))
         image = image.reshape((785,1))
@@ -74,49 +67,50 @@ def perceptron(Time, w_values, eta):
         if cpt == 0:
             #initialisation
             #matrice de poids 
-            #ys = numpy.full((10, Time+1), 0.0)
-            W =  Variable(w_values*torch.ones(label.size, image.size), requires_grad=True) 
-        Y = W.mm(X)
-        #ys[:,cpt] = numpy.array(Y.data).reshape(10,)
+            #losses = []
+            W1 =  Variable(w_values*torch.randn(N_neurons, image.size), requires_grad=True) 
+            W2 =  Variable(w_values*torch.randn(label.size, N_neurons), requires_grad=True) 
+        
+        #propagation de l'activité
+        sig = Sigmoid()
+        Y1 = sig(W1.mm(X))
+        Y2 = W2.mm(Y1)
+        
+        #retropropagation de l'erreur
         loss = MSELoss()
-        output = loss(Y, T)
-        losses.append(output[0])
+        output = loss(Y2, T)
+        #losses.append(output)
         output.backward()
-        #print(eta)
+        W1.data -= eta* W1.grad.data
+        W2.data -= eta* W2.grad.data
         
-        W.data -= eta* W.grad.data
+        W1.grad.data.zero_()
+        W2.grad.data.zero_()
         
-        W.grad.data.zero_()
-
         cpt_blobal +=1
         cpt += 1
         if cpt > Time:
             break
-    #for i in range(ys.shape[0]):
-    #    plt.plot(ys[i])
-    #plt.title("Neurons acticity in time")
-    return W.data
+        #plt.plot(losses)
+    return W1.data, W2.data
 
-def calcul_activite(poids, inputs):
-    Y = poids.data.mm(inputs.data)
-    return Y
-
-def prediction(W, image):
+def prediction(W1, W2, image):
     image = numpy.transpose(numpy.insert(image,0,1))
     image = image.reshape((785, 1))
-    Y =  W.mm(torch.as_tensor(image))
-    #print(Y.shape)
-    return int(Y.max(0)[1][0])
+    X = torch.as_tensor(image)
+    Y1 = 1/(1+torch.exp(-W1.mm(X)))
+    Y2 = W2.mm(Y1)
+    return int(Y2.max(0)[1][0])
 
 
-def test_perceptron(T, W):
+def test_shallow(T, W1, W2):
     cpt = 0
     nbOK = 0
     for image,label in test_loader:
         image = image[0,:].numpy().flatten()
         label = label[0,:].numpy()
-        #print("value : "+str(numpy.argmax(label)) + " predicted : "+str(prediction(W, image)))
-        if numpy.argmax(label)==prediction(W, image):
+        #print("value : "+str(numpy.argmax(label)) + " predicted : "+str(prediction(W1, W2, image)))
+        if numpy.argmax(label)==prediction(W1, W2, image):
             nbOK += 1
         cpt += 1
         if cpt > T:
@@ -124,28 +118,27 @@ def test_perceptron(T, W):
     print("OK ratio : "+str(1.0*nbOK/cpt))
     return 1.0*nbOK/cpt
 
-#W = perceptron(Time=4000, w_values=0.01, eta=0.0005)
-#ratio = test_perceptron(1000, W)
+#W1, W2 = shallow(Time=3000, w_values=0.03, eta=0.06, N_neurons = 32)
+#ratio = test_shallow(100, W1, W2)
+
 etas = []
 ratios = []
-'''for i in range(0, 1, -1):
-    for j in range(1, 10):
-        eta = j*10**(-i)
-        print(eta)
+results = numpy.zeros((20, 20))
+ns = [50,100,150,200,250,300,350,400,450, 500,550,600,650,700,750]
+for i in range(0, 20):
+    for j in range(1,12):
+        eta = i/20
+        #w = j/20
+        print("eta : ", eta," n : ", j)
         etas.append(eta)
-        W = perceptron(Time=2000, w_values=eta, eta=0.0005)
-        ratio = test_perceptron(1000, W)
-        ratios.append(ratio)'''
-#plot pour le temps
-for j in range(0, 30):
-    eta = j*50
-    print(eta)
-    etas.append(eta)
-    W = perceptron(Time=eta, w_values=0.01, eta=0.0005)
-    ratio = test_perceptron(1000, W)
-    ratios.append(ratio)
+        W1, W2 = shallow(Time=1500, w_values=eta, eta=0.06, N_neurons = j*50)
+        ratio = test_shallow(500, W1, W2)
+        results[i,j] = ratio
+        #ratios.append(ratio)
 
-plt.plot(etas, ratios)
-plt.title("Evolution du ratio de bonnes réponses\n en fonction du temps d'apprentissage")
-plt.ylabel("Taux de réussite")
-plt.xlabel("Nombre d'itérations pour l'apprentissage")
+plt.imshow(results)
+#0.01, 0.06, 32
+#plt.plot(etas, ratios)
+plt.title("Evolution du ratio de bonnes réponses\n en fonction des valeurs de poids initiales")
+#plt.ylabel("Taux de réussite")
+#plt.xlabel("omega")
