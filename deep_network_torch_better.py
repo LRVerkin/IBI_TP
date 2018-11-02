@@ -55,11 +55,12 @@ test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=Tr
 
 class Deep_Model:
 
-    def __init__(self,nb_hidden_layers,size_hidden_layers,activation_function):
+    def __init__(self,nb_hidden_layers,size_hidden_layers,activation_function,gradient_method):
         
         self.nb_hidden_layers = nb_hidden_layers
         self.size_hidden_layers = size_hidden_layers
         self.activation_function = activation_function
+        self.gradient_method = gradient_method
         # D_in is input dimension; D_out is output dimension.
         self.D_in, self.D_out = 785, 10
         self.model = self.create_model()
@@ -70,7 +71,7 @@ class Deep_Model:
         
         model = torch.nn.ModuleList([torch.nn.Linear(self.D_in, self.size_hidden_layers)])
     
-        if activation_function == "Sigmoid":
+        if activation_function in ["","Sigmoid"]:
             for i in range(self.nb_hidden_layers):
                 model.append(torch.nn.Sigmoid())
         if activation_function == "RELu":
@@ -79,6 +80,7 @@ class Deep_Model:
         if activation_function == "Tanh":
             for i in range(self.nb_hidden_layers):
                 model.append(torch.nn.Tanh())
+
 
         model.append(torch.nn.Linear(self.size_hidden_layers, self.D_out))
         return model
@@ -101,6 +103,13 @@ class Deep_Model:
         # Loss function used: MSE
         loss_fn = torch.nn.MSELoss(reduction='sum')
 
+        if self.gradient_method in ["","SGD"]:
+            optimizer = torch.optim.SGD(self.model.parameters(), lr=learning_rate)
+        if self.gradient_method == "Adam":
+            optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
+        if self.gradient_method == "Adagrad":
+            optimizer = torch.optim.Adagrad(self.model.parameters(), lr=learning_rate)
+
         for image,label in images_train:
             image = numpy.transpose(numpy.insert(image[0,:].numpy().flatten(), 0, 1))
             image = image.reshape((785,))
@@ -116,8 +125,9 @@ class Deep_Model:
             #print(t, loss.item())
 
             # Zero the gradients of all layers in ModuleList before running the backward pass.
-            for module in self.model:
-                module.zero_grad()
+            # for module in self.model:
+            #     module.zero_grad()
+            optimizer.zero_grad()
 
             # Backward pass: compute gradient of the loss with respect to all the learnable
             # parameters of the model.
@@ -125,9 +135,10 @@ class Deep_Model:
 
             # Update the weights using gradient descent. Each parameter is a Tensor, so
             # we can access its gradients like we did before.
-            with torch.no_grad():
-                for param in self.model.parameters():
-                    param -= learning_rate * param.grad
+            # with torch.no_grad():
+            #     for param in self.model.parameters():
+            #         param -= learning_rate * param.grad
+            optimizer.step()
 
             t += 1
             if t > T_train:
@@ -166,11 +177,13 @@ class Deep_Model:
 
 
 
-activation_function = ""
-while activation_function not in ["Sigmoid","RELU","Tanh"]:
-    activation_function = input("Activation Function for the network: Sigmoid, RELU or Tanh?\n")
-
-model = Deep_Model(nb_hidden_layers = 2,size_hidden_layers = 30,activation_function=activation_function)
+activation_function = " "
+while activation_function not in ["","Sigmoid","RELU","Tanh"]:
+    activation_function = input("Activation Function for the network: Sigmoid, RELU or Tanh? (default Sigmoid)\n")
+gradient_method = " "
+while gradient_method not in ["","SGD","Adam","Adagrad"]:
+    gradient_method = input("Gradient method for the network: SGD, Adam or Adagrad? (default SGD)\n")
+model = Deep_Model(nb_hidden_layers = 2,size_hidden_layers = 30,activation_function=activation_function,gradient_method=gradient_method)
 model.create_model()
 model.train_model(images_train = train_loader, T_train = 10000, learning_rate = 1e-2)
 model.use_model(images_test = test_loader, T_test = 300)
