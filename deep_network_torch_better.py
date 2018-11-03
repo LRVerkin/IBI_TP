@@ -28,7 +28,7 @@ def affichage(image,label):
 
 
 # nombre d'image lues à chaque fois dans la base d'apprentissage (laisser à 1 sauf pour la question optionnelle sur les minibatchs)
-TRAIN_BATCH_SIZE = 1
+TRAIN_BATCH_SIZE = int(input("Training batch size? (Should be between 1 and 32 at most)\n"))
 # on charge les données de la base MNIST
 data = pickle.load(gzip.open('mnist_light_CN.pkl.gz'),encoding='latin1')
 # images de la base d'apprentissage
