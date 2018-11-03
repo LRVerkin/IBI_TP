@@ -1,20 +1,14 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Fri Oct 19 08:08:38 2018
-
-@author: Louise
-"""
-
 import gzip # pour décompresser les données
 import pickle # pour désérialiser les données
 import numpy # pour pouvoir utiliser des matrices
 import matplotlib.pyplot as plt # pour l'affichage
 import torch,torch.utils.data
+from torch.autograd import *
+from torch.nn import *
 import math
-from torch.autograd import Variable
 
 
-## implementation d'un perceptron simple
 
 def affichage(image,label):
     # on récupère à quel chiffre cela correspond (position du 1 dans label)
@@ -30,8 +24,15 @@ def affichage(image,label):
     # on affichage les figures créées
     plt.show()
 
+
+
+
 # nombre d'image lues à chaque fois dans la base d'apprentissage (laisser à 1 sauf pour la question optionnelle sur les minibatchs)
-TRAIN_BATCH_SIZE = 1
+TRAIN_BATCH_SIZE = input("Training batch size? (Should be between 1 and 32 at most, default 1)\n")
+if TRAIN_BATCH_SIZE == "":
+    TRAIN_BATCH_SIZE = 1
+else:
+    TRAIN_BATCH_SIZE = int(TRAIN_BATCH_SIZE)
 # on charge les données de la base MNIST
 data = pickle.load(gzip.open('mnist_light_CN.pkl.gz'),encoding='latin1')
 # images de la base d'apprentissage
@@ -49,110 +50,147 @@ test_dataset = torch.utils.data.TensorDataset(test_data,test_data_label)
 # on crée le lecteur de la base de données d'apprentissage (pour torch)
 train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=TRAIN_BATCH_SIZE, shuffle=True)
 # on crée le lecteur de la base de données de test (pour torch)
-test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=False)
+test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=True)
 # 10 fois
-#for i in range(0,10):
-    # on demande les prochaines données de la base
-#    (_,(image,label)) = enumerate(train_loader).next()
-    # on les affiche
-#    affichage(image[0,:].numpy(),label[0,:].numpy())
-# NB pour lire (plus proprement) toute la base (ce que vous devrez faire dans le TP) plutôt utiliser la formulation suivante
-
-def deep_network(T, w_values, eta, N, taille_N):
-    cpt = 0
-    cpt_blobal = 0
-    for image,label in train_loader:
-        
-        image = image[0,:].numpy().flatten()
-        label = label[0,:].numpy()
-        print(cpt_blobal, numpy.argmax(label))
-        
-        dtype = torch.FloatTensor
-        if cpt == 0:
-            #initialisation
-            #matrice de poids 
-            W1 = Variable(torch.randn(N,image.size+1).type(dtype), requires_grad=True)
-            dW1 = numpy.full(W1.shape, 0.0) 
-            
-            hidden_weights = [W1]
-            hidden_layers = [Variable(torch.randn(N,).type(dtype), requires_grad=False)]
-            for n in range(N-1):
-                hidden_weights.append(Variable(torch.randn(N,N).type(dtype), requires_grad=True))
-                hidden_layers.append(Variable(torch.randn(N,).type(dtype), requires_grad=False))
-            
-            Ws = Variable(torch.randn(label.size,N).type(dtype), requires_grad=True)
-        
-        #Propagation de l'activité
-        ys = Variable(torch.randn(label.size,).type(dtype), requires_grad=False)
-        
-        image_tensor = Variable(torch.as_tensor(numpy.transpose(numpy.insert(image,0,1))))
-        
-        for i, layer in enumerate(hidden_layers):
-            if i == 0:
-                x = image_tensor
-            else:
-                x = layer[i-1]
-            '''for n in layer:
-                
-                
-                    
-                n = 1.0/(1+math.exp(-sum(torch.mm(hidden_weights[i], x))))'''
-            tmp = torch.mm(hidden_weights[i], x)
-            layer = 1.0/(1+math.exp(-torch.mm(hidden_weights[i], x)))
-        
-        ys = torch.mm(Ws, hidden_layers[-1])
-			
-		#Rétro-propagation du gradient
-        '''d1 = numpy.full((image.size+1,),0.0)
-        d2 = numpy.add(label,-y2)
-        for i in range(image.size+1):
-            d1[i] = y1[i]*(1-y1[i])*sum(numpy.multiply(d2,W2[:,i]))
-			
-			
-		#Modification des poids
-        for i in range(image.size+1):
-            for j in range(image.size+1):
-                dW1[i,j] = eta*d1[i]*numpy.insert(image,0,1)[j]
-		
-        for i in range(label.size):
-            for j in range(image.size+1):
-                dW2[i,j] = eta*d2[i]*y1[j]
-        			
-        W1 = numpy.add(W1, dW1)
-        W2 = numpy.add(W2, dW2)
-        cpt_blobal +=1
-        cpt += 1
-        if cpt > T:
-            break'''
-    print(ys)
-    return ys
-
-def prediction(W1, W2, image):
-    y1 = numpy.full((785,),0.0)
-    y2 = numpy.full((10,),0.0)
-    for i in range(image.size+1):
-        y1[i] =  1.0/(1+math.exp(-sum(numpy.multiply(W1[i], numpy.insert(image,0,1)))))
-       
-    for i in range(W2.shape[0]):
-        y2[i] = sum(numpy.multiply(W2[i], y1))
-    return numpy.argmax(y2)
 
 
-def test_perceptron(T, W1, W2):
-    cpt = 0
-    nbOK = 0
-    for image,label in test_loader:
-        image = image[0,:].numpy().flatten()
-        label = label[0,:].numpy()
-        print("value : "+str(numpy.argmax(label)) + " predicted : "+str(prediction(W1, W2, image)))
-        if numpy.argmax(label)==prediction(W1, W2, image):
-            nbOK += 1
-        cpt += 1
-        if cpt > T:
-            break
-    print("OK ratio : "+str(1.0*nbOK/cpt))
+
+
+
+class Deep_Model:
+
+    def __init__(self,nb_hidden_layers,size_hidden_layers,activation_function,gradient_method):
+        
+        self.nb_hidden_layers = nb_hidden_layers
+        self.size_hidden_layers = size_hidden_layers
+        self.activation_function = activation_function
+        self.gradient_method = gradient_method
+        # D_in is input dimension; D_out is output dimension.
+        self.D_in, self.D_out = 785, 10
+        self.model = self.create_model()
+
+
+
+    def create_model(self):
+        
+        model = torch.nn.ModuleList([torch.nn.Linear(self.D_in, self.size_hidden_layers)])
     
+        if activation_function in ["","Sigmoid"]:
+            for i in range(self.nb_hidden_layers):
+                model.append(torch.nn.Sigmoid())
+        if activation_function == "RELU":
+            for i in range(self.nb_hidden_layers):
+                model.append(torch.nn.LeakyReLU())
+        if activation_function == "Tanh":
+            for i in range(self.nb_hidden_layers):
+                model.append(torch.nn.Tanh())
 
-ys = deep_network(T=10,N = 10, taille_N = 300, w_values=0.001, eta=0.01)
-#test_perceptron(10, W1, W2)
-#numpy.max(W)
+
+        model.append(torch.nn.Linear(self.size_hidden_layers, self.D_out))
+        #model.append(torch.nn.Softmax())
+        return model
+
+    def forward(self,x):
+        # forward pass from input data x
+        # through all of the model
+        # returns: prediction of the model for x
+
+        y = self.model[0](x)
+        for i in range(1,len(self.model)):
+            y = self.model[i](y)
+
+        return y
+
+    def train_model(self,images_train, T_train,learning_rate):
+        
+        t = 0
+
+        # Loss function used: MSE
+        loss_fn = torch.nn.MSELoss(reduction='sum')
+
+        if self.gradient_method in ["","SGD"]:
+            optimizer = torch.optim.SGD(self.model.parameters(), lr=learning_rate)
+        if self.gradient_method == "Adam":
+            optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
+        if self.gradient_method == "Adagrad":
+            optimizer = torch.optim.Adagrad(self.model.parameters(), lr=learning_rate)
+
+        for image,label in images_train:
+            image = numpy.transpose(numpy.insert(image[0,:].numpy().flatten(), 0, 1))
+            image = image.reshape((785,))
+            x = torch.from_numpy(image)
+            label.resize_(10)
+
+            # Forward pass: compute predicted y by passing x to the model.
+            y_pred = self.forward(x)
+
+
+            # Compute loss
+            loss = loss_fn(y_pred, label)
+            #print(t, loss.item())
+
+            # Zero the gradients of all layers in ModuleList before running the backward pass.
+            # for module in self.model:
+            #     module.zero_grad()
+            optimizer.zero_grad()
+
+            # Backward pass: compute gradient of the loss with respect to all the learnable
+            # parameters of the model.
+            loss.backward()
+
+            # Update the weights using gradient descent. Each parameter is a Tensor, so
+            # we can access its gradients like we did before.
+            # with torch.no_grad():
+            #     for param in self.model.parameters():
+            #         param -= learning_rate * param.grad
+            optimizer.step()
+
+            t += 1
+            if t > T_train:
+                break
+
+        return model.cpu()
+
+
+    def use_model(self,images_test, T_test):
+    # T_test is testing set size
+    # images_set is testing set of images
+
+        t = 0
+        nbOK = 0
+
+        for image, label in images_test:
+            
+            image = numpy.transpose(numpy.insert(image[0,:].numpy().flatten(), 0, 1))
+            image = image.reshape((785,))
+            x = torch.from_numpy(image)
+            label.resize_(10)
+
+            y_pred = self.forward(x)
+
+            value_pred, index_pred = y_pred.max(0)
+            value_true, index_true = label.max(0)
+            if index_true.item()==index_pred.item():
+                nbOK += 1
+            #print("Real value is "+str(index_true.item())+" -- prediction is "+str(index_pred.item()))
+            t += 1
+            if t > T_test:
+                break
+
+        print("OK ratio: "+str(1.0*nbOK/T_test))
+
+
+
+
+activation_function = " "
+while activation_function not in ["","Sigmoid","RELU","Tanh"]:
+    activation_function = input("Activation Function for the network: Sigmoid, RELU or Tanh? (default Sigmoid)\n")
+gradient_method = " "
+while gradient_method not in ["","SGD","Adam","Adagrad"]:
+    gradient_method = input("Gradient method for the network: SGD, Adam or Adagrad? (default SGD)\n")
+
+model = Deep_Model(nb_hidden_layers = 3,size_hidden_layers = 30,activation_function=activation_function,gradient_method=gradient_method)
+for i in range(10):
+    model.create_model()
+    model.train_model(images_train = train_loader, T_train = 10000, learning_rate = i*1e-2)
+    model.use_model(images_test = test_loader, T_test = 300)
