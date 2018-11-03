@@ -92,7 +92,7 @@ def deep(Time, w_values, eta, N_neurons,N_hidden_layers):
         #Y2 = W2.mm(W1.mm(X))
         loss = MSELoss()
         output = loss(Ys[-1], T)
-        losses.append(output)
+        losses.append(output.data)
         output.backward()
 
         for W in weights:
@@ -105,7 +105,25 @@ def deep(Time, w_values, eta, N_neurons,N_hidden_layers):
 
         if cpt > Time:
             break
-
+    '''smoothing_window = 50
+    res = numpy.array(losses)
+    print(res)
+    for i,value in enumerate(res):
+        if i-int(smoothing_window/2) >=0:
+            tp_min = i - int(smoothing_window/2)
+        else:
+            tp_min = 0
+        if i+int(smoothing_window/2) <= len(res)-1:
+            tp_max = i + int(smoothing_window/2)
+        else:
+            tp_max = len(res)-1
+        if tp_min == 0:
+            tp_max = smoothing_window
+        if tp_max == len(res)-1:
+            tp_min = len(res)-1-smoothing_window
+        res[i] = numpy.mean(numpy.array(res[tp_min:tp_max]))'''
+    #print res
+    #plt.plot(res)
     return [W.data for W in weights]
 
 def prediction(weights, image):
@@ -129,7 +147,7 @@ def test_deep(T, weights):
     for image,label in test_loader:
         image = image[0,:].numpy().flatten()
         label = label[0,:].numpy()
-        print("value : "+str(numpy.argmax(label)) + " predicted : "+str(prediction(weights, image)))
+        #print("value : "+str(numpy.argmax(label)) + " predicted : "+str(prediction(weights, image)))
         if numpy.argmax(label)==prediction(weights, image):
             nbOK += 1
         cpt += 1
@@ -138,9 +156,25 @@ def test_deep(T, weights):
     print("OK ratio : "+str(1.0*nbOK/cpt))
     return 1.0*nbOK/cpt
 
-weights = deep(Time=2000, w_values=0.03, eta=1, N_neurons = 32,N_hidden_layers=3)
-ratio = test_deep(100, weights)
-        
+#weights = deep(Time=2000, w_values=0.1, eta=0.25, N_neurons = 100,N_hidden_layers=2)
+#ratio = test_deep(100, weights)
+
+results = numpy.zeros((20, 20))
+for k1, i in enumerate(numpy.linspace(50, 3000, num = 20)):
+    for k2, j in enumerate(numpy.linspace(1, 6, num = 20)):
+        #eta = i/200
+        #w = j/200
+        print("eta : ", i," N : ", int(j))
+        #etas.append(eta)
+        Ws = deep(Time=int(i), w_values=0.3, eta=0.2, N_neurons = 32, N_hidden_layers = int(j))
+        ratio = test_deep(500, Ws)
+        results[k1,k2] = ratio
+        #ratios.append(ratio)
+
+plt.imshow(results)
+#plt.savefing("res.png")
+
+
 '''etas = []
 ratios = []
 for i in range(10, 5, -1):
