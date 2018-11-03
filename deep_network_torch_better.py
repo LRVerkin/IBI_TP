@@ -25,8 +25,6 @@ def affichage(image,label):
     plt.show()
 
 
-
-
 # nombre d'image lues à chaque fois dans la base d'apprentissage (laisser à 1 sauf pour la question optionnelle sur les minibatchs)
 TRAIN_BATCH_SIZE = int(input("Training batch size? (Should be between 1 and 32 at most)\n"))
 # on charge les données de la base MNIST
@@ -70,14 +68,13 @@ class Deep_Model:
     def create_model(self):
         
         model = torch.nn.ModuleList([torch.nn.Linear(self.D_in, self.size_hidden_layers)])
-    
         if activation_function in ["","Sigmoid"]:
             for i in range(self.nb_hidden_layers):
                 model.append(torch.nn.Sigmoid())
-        if activation_function == "RELu":
+        if self.activation_function == "RELu":
             for i in range(self.nb_hidden_layers):
                 model.append(torch.nn.RELU())
-        if activation_function == "Tanh":
+        if self.activation_function == "Tanh":
             for i in range(self.nb_hidden_layers):
                 model.append(torch.nn.Tanh())
 
@@ -173,11 +170,42 @@ class Deep_Model:
                 break
 
         print("OK ratio: "+str(1.0*nbOK/T_test))
+        return 1.0*nbOK/T_test
+
+#model = Deep_Model(nb_hidden_layers = 2,size_hidden_layers = 32,activation_function="RELU")
+#model.create_model()
+#model.train_model(images_train = train_loader, T_train = 5000, learning_rate = 1e-4)
+#ratio = model.use_model(images_test = test_loader, T_test = 300)
+
+ratios = []
+for i, eta in enumerate(numpy.linspace(0.005, 0.000005, num = 50)):
+    model = Deep_Model(nb_hidden_layers = 2,size_hidden_layers = 32,activation_function="RELU")
+    model.create_model()
+    model.train_model(images_train = train_loader, T_train = 10000, learning_rate = eta)
+    ratios.append(model.use_model(images_test = test_loader, T_test = 300))
+plt.plot(numpy.linspace(0.005, 0.000005, num = 50), ratios)    
+
+#activation_function = ""
+#while activation_function not in ["Sigmoid","RELU","Tanh"]:
+#    activation_function = input("Activation Function for the network: Sigmoid, RELU or Tanh?\n")
+'''acts =  ["Sigmoid","Sigmoid","Sigmoid","Sigmoid", "RELU","RELU","RELU","RELU", "Tanh","Tanh","Tanh","Tanh" ]
+results = numpy.zeros((20, 20))
+for k1, i in enumerate(numpy.linspace(10, 400, num = 20)):
+    for k2, act in enumerate(acts):
+        print("N  : ", i," fonction : ",act)
+        model = Deep_Model(nb_hidden_layers = 2,size_hidden_layers = int(i),activation_function="RELU")
+        model.create_model()
+        model.train_model(images_train = train_loader, T_train = 10000, learning_rate = 1e-2)
+        ratio = model.use_model(images_test = test_loader, T_test = 300)
+        results[k1,k2] = ratio
+
+plt.imshow(results[:, 0:11])
+#model = Deep_Model(nb_hidden_layers = 2,size_hidden_layers = 30,activation_function=activation_function)
+'''
 
 
 
-
-activation_function = " "
+'''activation_function = " "
 while activation_function not in ["","Sigmoid","RELU","Tanh"]:
     activation_function = input("Activation Function for the network: Sigmoid, RELU or Tanh? (default Sigmoid)\n")
 gradient_method = " "
@@ -186,4 +214,4 @@ while gradient_method not in ["","SGD","Adam","Adagrad"]:
 model = Deep_Model(nb_hidden_layers = 2,size_hidden_layers = 30,activation_function=activation_function,gradient_method=gradient_method)
 model.create_model()
 model.train_model(images_train = train_loader, T_train = 10000, learning_rate = 1e-2)
-model.use_model(images_test = test_loader, T_test = 300)
+model.use_model(images_test = test_loader, T_test = 300)'''
