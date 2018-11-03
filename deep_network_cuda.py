@@ -78,7 +78,7 @@ class Deep_Model:
         if activation_function in ["","Sigmoid"]:
             for i in range(self.nb_hidden_layers):
                 model.append(torch.nn.Sigmoid())
-        if activation_function == "RELu":
+        if activation_function == "RELU":
             for i in range(self.nb_hidden_layers):
                 model.append(torch.nn.LeakyReLU())
         if activation_function == "Tanh":
