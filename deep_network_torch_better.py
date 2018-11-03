@@ -26,7 +26,11 @@ def affichage(image,label):
 
 
 # nombre d'image lues à chaque fois dans la base d'apprentissage (laisser à 1 sauf pour la question optionnelle sur les minibatchs)
-TRAIN_BATCH_SIZE = int(input("Training batch size? (Should be between 1 and 32 at most)\n"))
+TRAIN_BATCH_SIZE = input("Training batch size? (Should be between 1 and 32 at most, default 1)\n")
+if TRAIN_BATCH_SIZE == "":
+    TRAIN_BATCH_SIZE = 1
+else:
+    TRAIN_BATCH_SIZE = int(TRAIN_BATCH_SIZE)
 # on charge les données de la base MNIST
 data = pickle.load(gzip.open('mnist_light_CN.pkl.gz'),encoding='latin1')
 # images de la base d'apprentissage
@@ -71,7 +75,7 @@ class Deep_Model:
         if activation_function in ["","Sigmoid"]:
             for i in range(self.nb_hidden_layers):
                 model.append(torch.nn.Sigmoid())
-        if self.activation_function == "RELu":
+        if self.activation_function == "RELU":
             for i in range(self.nb_hidden_layers):
                 model.append(torch.nn.RELU())
         if self.activation_function == "Tanh":
