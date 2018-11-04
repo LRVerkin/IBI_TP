@@ -75,13 +75,13 @@ class Deep_Model:
         
         model = torch.nn.ModuleList([torch.nn.Linear(self.D_in, self.size_hidden_layers)])
     
-        if activation_function in ["","Sigmoid"]:
+        if self.activation_function in ["","Sigmoid"]:
             for i in range(self.nb_hidden_layers):
                 model.append(torch.nn.Sigmoid())
-        if activation_function == "RELU":
+        if self.activation_function == "RELU":
             for i in range(self.nb_hidden_layers):
                 model.append(torch.nn.LeakyReLU())
-        if activation_function == "Tanh":
+        if self.activation_function == "Tanh":
             for i in range(self.nb_hidden_layers):
                 model.append(torch.nn.Tanh())
 
@@ -149,7 +149,7 @@ class Deep_Model:
             if t > T_train:
                 break
 
-        return model.cpu()
+        return model
 
 
     def use_model(self,images_test, T_test):
@@ -177,7 +177,9 @@ class Deep_Model:
             if t > T_test:
                 break
 
-        print("OK ratio: "+str(1.0*nbOK/T_test))
+        OKratio = 1.0*nbOK/T_test
+        print("OK ratio: "+str(OKratio))
+        return OKratio
 
 
 
@@ -189,8 +191,16 @@ gradient_method = " "
 while gradient_method not in ["","SGD","Adam","Adagrad"]:
     gradient_method = input("Gradient method for the network: SGD, Adam or Adagrad? (default SGD)\n")
 
+ratios = []
 model = Deep_Model(nb_hidden_layers = 3,size_hidden_layers = 30,activation_function=activation_function,gradient_method=gradient_method)
-for i in range(10):
+for i in range(1,10):
     model.create_model()
-    model.train_model(images_train = train_loader, T_train = 10000, learning_rate = i*1e-2)
-    model.use_model(images_test = test_loader, T_test = 300)
+    model.train_model(images_train = train_loader, T_train = 10000, learning_rate = i*1e-4)
+    ratios.append(model.use_model(images_test = test_loader, T_test = 300))
+
+plt.plot(ratios)
+plt.xlabel("Pas d'apprentissage")
+plt.ylabel("Ratio de bonnes prédictions")
+plt.show()
+
+
